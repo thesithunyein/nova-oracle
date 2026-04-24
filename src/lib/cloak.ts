@@ -8,12 +8,25 @@ import {
   SOLANA_RPC_URL,
   CLOAK_PROGRAM,
   NATIVE_SOL_MINT_PK,
+  IS_DEVNET,
 } from "./constants";
 
 // Dynamic import for Cloak SDK — resolves at runtime only
 async function getCloakSDK() {
   const sdk = await import("@cloak.dev/sdk");
   return sdk;
+}
+
+// Demo mode helpers (devnet — Cloak relay only supports mainnet)
+function randomSig(): string {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let sig = "";
+  for (let i = 0; i < 88; i++) sig += chars[Math.floor(Math.random() * chars.length)];
+  return sig;
+}
+
+async function simulateDelay(ms = 1500) {
+  await new Promise((r) => setTimeout(r, ms + Math.random() * 1000));
 }
 
 export function getConnection(): Connection {
@@ -53,6 +66,13 @@ export interface CloakKeys {
 }
 
 export async function initializeCloakKeys(): Promise<CloakKeys> {
+  // Demo mode on devnet
+  if (IS_DEVNET) {
+    const fakeNk = new Uint8Array(32);
+    crypto.getRandomValues(fakeNk);
+    return { scanKeypair: { publicKey: fakeNk, privateKey: fakeNk }, viewingKeyNk: fakeNk };
+  }
+
   const sdk = await getCloakSDK();
   const scanKeypair = await sdk.generateUtxoKeypair();
   const viewingKeyNk = sdk.getNkFromUtxoPrivateKey(scanKeypair.privateKey);
@@ -82,6 +102,12 @@ export async function shieldedSend(args: {
   viewingKeyNk: Uint8Array;
   connection?: Connection;
 }): Promise<{ signature: string }> {
+  // Demo mode on devnet — simulate the Cloak flow
+  if (IS_DEVNET) {
+    await simulateDelay(2000);
+    return { signature: randomSig() };
+  }
+
   const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
@@ -157,6 +183,28 @@ export async function executePayrollBatch(args: {
 }
 
 export async function scanHistory(viewingKeyNk: Uint8Array, limit = 250) {
+  // Demo mode on devnet
+  if (IS_DEVNET) {
+    await simulateDelay(1500);
+    return {
+      summary: {
+        totalTransactions: 12,
+        totalDeposits: 5,
+        totalWithdrawals: 4,
+        totalTransfers: 3,
+        totalVolume: "45.2 SOL",
+        dateRange: { from: new Date(Date.now() - 30 * 86400000).toISOString(), to: new Date().toISOString() },
+      },
+      transactions: Array.from({ length: 5 }, (_, i) => ({
+        signature: randomSig(),
+        type: ["deposit", "withdrawal", "transfer"][i % 3],
+        amount: (Math.random() * 5 + 0.1).toFixed(4),
+        mint: "SOL",
+        timestamp: new Date(Date.now() - i * 86400000).toISOString(),
+      })),
+    };
+  }
+
   const sdk = await getCloakSDK();
   const connection = getConnection();
   const scan = await sdk.scanTransactions({
@@ -175,6 +223,12 @@ export async function depositToShieldedPool(args: {
   viewingKeyNk: Uint8Array;
   connection?: Connection;
 }) {
+  // Demo mode on devnet
+  if (IS_DEVNET) {
+    await simulateDelay(2000);
+    return { signature: randomSig(), outputUtxos: [], merkleTree: null };
+  }
+
   const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
@@ -211,6 +265,12 @@ export async function withdrawFromPool(args: {
   amount?: bigint;
   connection?: Connection;
 }) {
+  // Demo mode on devnet
+  if (IS_DEVNET) {
+    await simulateDelay(1800);
+    return { signature: randomSig() };
+  }
+
   const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
