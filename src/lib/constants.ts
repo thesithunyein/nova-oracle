@@ -1,21 +1,30 @@
 import { PublicKey } from "@solana/web3.js";
 
+export const NETWORK = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet") as "devnet" | "mainnet-beta";
+export const IS_DEVNET = NETWORK === "devnet";
+
 export const CLOAK_PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_CLOAK_PROGRAM_ID || "zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW"
 );
 
 export const SOLANA_RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || (IS_DEVNET
+    ? "https://api.devnet.solana.com"
+    : "https://api.mainnet-beta.solana.com");
 
 export const CLOAK_RELAY_URL =
   process.env.NEXT_PUBLIC_CLOAK_RELAY_URL || "https://api.cloak.ag";
 
 export const USDC_MINT = new PublicKey(
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  IS_DEVNET
+    ? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    : "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 );
 
 export const USDT_MINT = new PublicKey(
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+  IS_DEVNET
+    ? "EJwZgeZrdC8TXTQbQBoL6bfuAnFUQYtEnrNRrVe7FKCr"
+    : "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
 );
 
 export const NATIVE_SOL_MINT_ADDRESS = new PublicKey(
@@ -44,6 +53,8 @@ export function calculateNetAmount(grossAmount: bigint): bigint {
   return grossAmount - calculateFee(grossAmount);
 }
 
-export const SOLSCAN_BASE = "https://solscan.io";
-export const SOLSCAN_TX = (sig: string) => `${SOLSCAN_BASE}/tx/${sig}`;
-export const SOLSCAN_ACCOUNT = (addr: string) => `${SOLSCAN_BASE}/account/${addr}`;
+export const SOLSCAN_BASE = IS_DEVNET ? "https://solscan.io" : "https://solscan.io";
+export const SOLSCAN_TX = (sig: string) =>
+  IS_DEVNET ? `${SOLSCAN_BASE}/tx/${sig}?cluster=devnet` : `${SOLSCAN_BASE}/tx/${sig}`;
+export const SOLSCAN_ACCOUNT = (addr: string) =>
+  IS_DEVNET ? `${SOLSCAN_BASE}/account/${addr}?cluster=devnet` : `${SOLSCAN_BASE}/account/${addr}`;

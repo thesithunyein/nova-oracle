@@ -152,7 +152,7 @@ export default function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-purple-500/20 bg-purple-500/5 text-purple-400 text-sm mb-8">
               <Zap className="w-3.5 h-3.5" />
-              Powered by Cloak SDK — Live on Solana Mainnet
+              Powered by Cloak SDK — Devnet (Mainnet Ready)
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
