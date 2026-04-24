@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NovaLogoFull } from "@/components/ui/nova-logo";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { shortenAddress } from "@/lib/utils";
 
@@ -33,11 +34,8 @@ export function Sidebar() {
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="flex items-center gap-2 px-6 h-16 border-b border-border">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold gradient-text">NovaPay</span>
+          <Link href="/">
+            <NovaLogoFull size={30} />
           </Link>
         </div>
 
