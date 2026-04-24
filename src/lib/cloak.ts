@@ -1,22 +1,20 @@
 "use client";
 
-import {
-  CLOAK_PROGRAM_ID,
-  NATIVE_SOL_MINT,
-  createUtxo,
-  createZeroUtxo,
-  fullWithdraw,
-  generateUtxoKeypair,
-  getNkFromUtxoPrivateKey,
-  partialWithdraw,
-  transact,
-  scanTransactions,
-  toComplianceReport,
-} from "@cloak.dev/sdk";
 import { Connection, PublicKey, Keypair } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import type { TokenType } from "./types";
-import { USDC_MINT, USDT_MINT, SOLANA_RPC_URL } from "./constants";
+import {
+  USDC_MINT,
+  USDT_MINT,
+  SOLANA_RPC_URL,
+  CLOAK_PROGRAM,
+  NATIVE_SOL_MINT_PK,
+} from "./constants";
+
+// Dynamic import for Cloak SDK — resolves at runtime only
+async function getCloakSDK() {
+  const sdk = await import("@cloak.dev/sdk");
+  return sdk;
+}
 
 export function getConnection(): Connection {
   return new Connection(SOLANA_RPC_URL, "confirmed");
@@ -25,11 +23,13 @@ export function getConnection(): Connection {
 export function getMintForToken(token: TokenType): PublicKey {
   switch (token) {
     case "SOL":
-      return NATIVE_SOL_MINT;
+      return NATIVE_SOL_MINT_PK;
     case "USDC":
       return USDC_MINT;
     case "USDT":
       return USDT_MINT;
+    default:
+      return NATIVE_SOL_MINT_PK;
   }
 }
 
@@ -48,13 +48,14 @@ export function fromBaseUnits(baseUnits: bigint, token: TokenType): number {
 }
 
 export interface CloakKeys {
-  scanKeypair: Awaited<ReturnType<typeof generateUtxoKeypair>>;
+  scanKeypair: any;
   viewingKeyNk: Uint8Array;
 }
 
 export async function initializeCloakKeys(): Promise<CloakKeys> {
-  const scanKeypair = await generateUtxoKeypair();
-  const viewingKeyNk = getNkFromUtxoPrivateKey(scanKeypair.privateKey);
+  const sdk = await getCloakSDK();
+  const scanKeypair = await sdk.generateUtxoKeypair();
+  const viewingKeyNk = sdk.getNkFromUtxoPrivateKey(scanKeypair.privateKey);
   return { scanKeypair, viewingKeyNk };
 }
 
@@ -66,7 +67,7 @@ export function buildBaseOptions(
   const conn = connection || getConnection();
   return {
     connection: conn,
-    programId: CLOAK_PROGRAM_ID,
+    programId: CLOAK_PROGRAM,
     depositorKeypair: signer,
     walletPublicKey: signer.publicKey,
     chainNoteViewingKeyNk: viewingKeyNk,
@@ -81,18 +82,19 @@ export async function shieldedSend(args: {
   viewingKeyNk: Uint8Array;
   connection?: Connection;
 }): Promise<{ signature: string }> {
+  const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
     args.viewingKeyNk,
     args.connection
   );
 
-  const owner = await generateUtxoKeypair();
-  const output = await createUtxo(args.amount, owner, args.mint);
+  const owner = await sdk.generateUtxoKeypair();
+  const output = await sdk.createUtxo(args.amount, owner, args.mint);
 
-  const deposited = await transact(
+  const deposited = await sdk.transact(
     {
-      inputUtxos: [await createZeroUtxo(args.mint)],
+      inputUtxos: [await sdk.createZeroUtxo(args.mint)],
       outputUtxos: [output],
       externalAmount: args.amount,
       depositor: args.signer.publicKey,
@@ -100,7 +102,7 @@ export async function shieldedSend(args: {
     baseOptions
   );
 
-  const result = await fullWithdraw(
+  const result = await sdk.fullWithdraw(
     deposited.outputUtxos,
     args.recipientWallet,
     {
@@ -109,7 +111,7 @@ export async function shieldedSend(args: {
     }
   );
 
-  return { signature: result.signature };
+  return { signature: (result as any).signature || "" };
 }
 
 export async function executePayrollBatch(args: {
@@ -142,7 +144,7 @@ export async function executePayrollBatch(args: {
       });
 
       args.onProgress?.(i + 1, args.recipients.length, signature);
-    } catch (error) {
+    } catch (error: any) {
       results.push({
         wallet: payment.wallet.toBase58(),
         signature: "",
@@ -155,14 +157,15 @@ export async function executePayrollBatch(args: {
 }
 
 export async function scanHistory(viewingKeyNk: Uint8Array, limit = 250) {
+  const sdk = await getCloakSDK();
   const connection = getConnection();
-  const scan = await scanTransactions({
+  const scan = await sdk.scanTransactions({
     connection,
-    programId: CLOAK_PROGRAM_ID,
+    programId: CLOAK_PROGRAM,
     viewingKeyNk,
     limit,
   });
-  return toComplianceReport(scan);
+  return sdk.toComplianceReport(scan);
 }
 
 export async function depositToShieldedPool(args: {
@@ -172,18 +175,19 @@ export async function depositToShieldedPool(args: {
   viewingKeyNk: Uint8Array;
   connection?: Connection;
 }) {
+  const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
     args.viewingKeyNk,
     args.connection
   );
 
-  const owner = await generateUtxoKeypair();
-  const output = await createUtxo(args.amount, owner, args.mint);
+  const owner = await sdk.generateUtxoKeypair();
+  const output = await sdk.createUtxo(args.amount, owner, args.mint);
 
-  const deposited = await transact(
+  const deposited = await sdk.transact(
     {
-      inputUtxos: [await createZeroUtxo(args.mint)],
+      inputUtxos: [await sdk.createZeroUtxo(args.mint)],
       outputUtxos: [output],
       externalAmount: args.amount,
       depositor: args.signer.publicKey,
@@ -192,7 +196,7 @@ export async function depositToShieldedPool(args: {
   );
 
   return {
-    signature: deposited.signature || "",
+    signature: (deposited as any).signature || "",
     outputUtxos: deposited.outputUtxos,
     merkleTree: deposited.merkleTree,
   };
@@ -207,6 +211,7 @@ export async function withdrawFromPool(args: {
   amount?: bigint;
   connection?: Connection;
 }) {
+  const sdk = await getCloakSDK();
   const baseOptions = buildBaseOptions(
     args.signer,
     args.viewingKeyNk,
@@ -214,13 +219,13 @@ export async function withdrawFromPool(args: {
   );
 
   if (args.amount) {
-    return partialWithdraw(args.outputUtxos, args.recipientWallet, args.amount, {
+    return sdk.partialWithdraw(args.outputUtxos, args.recipientWallet, args.amount, {
       ...baseOptions,
       cachedMerkleTree: args.merkleTree,
     });
   }
 
-  return fullWithdraw(args.outputUtxos, args.recipientWallet, {
+  return sdk.fullWithdraw(args.outputUtxos, args.recipientWallet, {
     ...baseOptions,
     cachedMerkleTree: args.merkleTree,
   });

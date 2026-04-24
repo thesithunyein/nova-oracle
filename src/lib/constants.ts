@@ -22,6 +22,9 @@ export const NATIVE_SOL_MINT_ADDRESS = new PublicKey(
   "So11111111111111111111111111111111111111112"
 );
 
+export const CLOAK_PROGRAM = CLOAK_PROGRAM_ID;
+export const NATIVE_SOL_MINT_PK = NATIVE_SOL_MINT_ADDRESS;
+
 export const TOKEN_OPTIONS = [
   { label: "SOL", value: "SOL", decimals: 9, icon: "◎" },
   { label: "USDC", value: "USDC", decimals: 6, icon: "$" },
