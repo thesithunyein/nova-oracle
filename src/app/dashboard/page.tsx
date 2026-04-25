@@ -183,7 +183,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <h3 className="font-semibold text-lg">
-                Powered by Cloak SDK — Live on Mainnet
+                Powered by Cloak SDK — Devnet (Mainnet Ready)
               </h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
                 Every payment runs through Cloak&apos;s UTXO shielded pool with
