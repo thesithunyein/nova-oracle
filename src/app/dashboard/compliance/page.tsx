@@ -20,7 +20,12 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { initializeCloakKeys, scanHistory } from "@/lib/cloak";
+import { IS_DEVNET } from "@/lib/constants";
+
+function randomSig(): string {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  return Array.from({ length: 88 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 export default function CompliancePage() {
   const { viewingKeys, addViewingKey, removeViewingKey } = useAppStore();
@@ -37,8 +42,18 @@ export default function CompliancePage() {
 
     setIsGenerating(true);
     try {
-      const cloakKeys = await initializeCloakKeys();
-      const nkHex = Array.from(cloakKeys.viewingKeyNk)
+      let nkBytes: Uint8Array;
+
+      if (IS_DEVNET) {
+        nkBytes = new Uint8Array(32);
+        crypto.getRandomValues(nkBytes);
+      } else {
+        const cloak = await import("@/lib/cloak");
+        const cloakKeys = await cloak.initializeCloakKeys();
+        nkBytes = cloakKeys.viewingKeyNk;
+      }
+
+      const nkHex = Array.from(nkBytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
@@ -62,10 +77,39 @@ export default function CompliancePage() {
   const runComplianceScan = async (nkHex: string) => {
     setIsScanning(true);
     try {
-      const nkBytes = new Uint8Array(
-        nkHex.match(/.{2}/g)!.map((b) => parseInt(b, 16))
-      );
-      const report = await scanHistory(nkBytes);
+      let report: any;
+
+      if (IS_DEVNET) {
+        // Demo mode — simulated chain-native scan results
+        await new Promise((r) => setTimeout(r, 1500));
+        report = {
+          summary: {
+            totalTransactions: 12,
+            totalDeposits: 5,
+            totalWithdrawals: 4,
+            totalTransfers: 3,
+            totalVolume: "45.2 SOL",
+            dateRange: {
+              from: new Date(Date.now() - 30 * 86400000).toISOString(),
+              to: new Date().toISOString(),
+            },
+          },
+          transactions: Array.from({ length: 5 }, (_, i) => ({
+            signature: randomSig(),
+            type: ["deposit", "withdrawal", "transfer"][i % 3],
+            amount: (Math.random() * 5 + 0.1).toFixed(4),
+            mint: "SOL",
+            timestamp: new Date(Date.now() - i * 86400000).toISOString(),
+          })),
+        };
+      } else {
+        const nkBytes = new Uint8Array(
+          nkHex.match(/.{2}/g)!.map((b) => parseInt(b, 16))
+        );
+        const cloak = await import("@/lib/cloak");
+        report = await cloak.scanHistory(nkBytes);
+      }
+
       setScanResult(report);
       toast.success("Compliance scan complete");
     } catch (error) {

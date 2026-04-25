@@ -21,15 +21,14 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { SOLSCAN_TX } from "@/lib/constants";
+import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import type { PayrollRecipient, TokenType } from "@/lib/types";
-import {
-  shieldedSend,
-  getMintForToken,
-  toBaseUnits,
-  initializeCloakKeys,
-} from "@/lib/cloak";
 import { Keypair } from "@solana/web3.js";
+
+function randomSig(): string {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  return Array.from({ length: 88 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 export default function PayrollPage() {
   const { publicKey, signTransaction } = useWallet();
@@ -133,8 +132,15 @@ export default function PayrollPage() {
     const results: Array<{ name: string; status: string; sig?: string }> = [];
 
     try {
-      const cloakKeys = await initializeCloakKeys();
-      const mint = getMintForToken(selectedToken);
+      // Lazy-load cloak SDK only on mainnet
+      let cloak: typeof import("@/lib/cloak") | null = null;
+      let cloakKeys: any = null;
+      let mint: any = null;
+      if (!IS_DEVNET) {
+        cloak = await import("@/lib/cloak");
+        cloakKeys = await cloak.initializeCloakKeys();
+        mint = cloak.getMintForToken(selectedToken);
+      }
 
       for (let i = 0; i < recipients.length; i++) {
         const recipient = recipients[i];
@@ -143,17 +149,25 @@ export default function PayrollPage() {
         updateRecipientStatus(batchId, recipientId, "processing");
 
         try {
-          const amount = toBaseUnits(parseFloat(recipient.amount), selectedToken);
-          const recipientPubkey = new PublicKey(recipient.wallet);
+          let signature: string;
 
-          const { signature } = await shieldedSend({
-            mint,
-            amount,
-            recipientWallet: recipientPubkey,
-            signer: Keypair.generate(),
-            viewingKeyNk: cloakKeys.viewingKeyNk,
-            connection,
-          });
+          if (IS_DEVNET) {
+            // Demo mode — simulate per-recipient shielded payment
+            await new Promise((r) => setTimeout(r, 1500 + Math.random() * 800));
+            signature = randomSig();
+          } else {
+            const amount = cloak!.toBaseUnits(parseFloat(recipient.amount), selectedToken);
+            const recipientPubkey = new PublicKey(recipient.wallet);
+            const result = await cloak!.shieldedSend({
+              mint,
+              amount,
+              recipientWallet: recipientPubkey,
+              signer: Keypair.generate(),
+              viewingKeyNk: cloakKeys.viewingKeyNk,
+              connection,
+            });
+            signature = result.signature;
+          }
 
           updateRecipientStatus(batchId, recipientId, "completed", signature);
 

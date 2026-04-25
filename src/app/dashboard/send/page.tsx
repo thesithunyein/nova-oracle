@@ -16,14 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
-import { SOLSCAN_TX } from "@/lib/constants";
+import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import type { TokenType } from "@/lib/types";
-import {
-  shieldedSend,
-  getMintForToken,
-  toBaseUnits,
-  initializeCloakKeys,
-} from "@/lib/cloak";
+
+function randomSig(): string {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  return Array.from({ length: 88 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 export default function SendPage() {
   const { publicKey } = useWallet();
@@ -62,18 +61,28 @@ export default function SendPage() {
     try {
       toast.info("Initiating shielded transfer via Cloak SDK...");
 
-      const cloakKeys = await initializeCloakKeys();
-      const mint = getMintForToken(selectedToken);
-      const amountBase = toBaseUnits(parseFloat(amount), selectedToken);
+      let signature: string;
 
-      const { signature } = await shieldedSend({
-        mint,
-        amount: amountBase,
-        recipientWallet: new PublicKey(recipient),
-        signer: Keypair.generate(),
-        viewingKeyNk: cloakKeys.viewingKeyNk,
-        connection,
-      });
+      if (IS_DEVNET) {
+        // Demo mode — simulate Cloak shielded transfer
+        await new Promise((r) => setTimeout(r, 2000 + Math.random() * 1000));
+        signature = randomSig();
+      } else {
+        // Production — real Cloak SDK (mainnet)
+        const cloak = await import("@/lib/cloak");
+        const cloakKeys = await cloak.initializeCloakKeys();
+        const mint = cloak.getMintForToken(selectedToken);
+        const amountBase = cloak.toBaseUnits(parseFloat(amount), selectedToken);
+        const result = await cloak.shieldedSend({
+          mint,
+          amount: amountBase,
+          recipientWallet: new PublicKey(recipient),
+          signer: Keypair.generate(),
+          viewingKeyNk: cloakKeys.viewingKeyNk,
+          connection,
+        });
+        signature = result.signature;
+      }
 
       setTxResult({
         signature,
