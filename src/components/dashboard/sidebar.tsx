@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NovaLogoFull } from "@/components/ui/nova-logo";
@@ -30,7 +31,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { publicKey } = useWallet();
+  const { publicKey, disconnect } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const sidebarContent = (
@@ -99,11 +100,20 @@ export function Sidebar() {
           Cloak Program on Explorer
         </a>
         {publicKey && (
-          <div className="px-3 py-2 rounded-lg bg-accent/50">
-            <p className="text-xs text-muted-foreground">Connected</p>
-            <p className="text-sm font-mono font-medium">
-              {shortenAddress(publicKey.toBase58(), 6)}
-            </p>
+          <div className="px-3 py-2 rounded-lg bg-accent/50 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Connected</p>
+              <p className="text-sm font-mono font-medium truncate">
+                {shortenAddress(publicKey.toBase58(), 6)}
+              </p>
+            </div>
+            <button
+              onClick={() => disconnect()}
+              title="Disconnect wallet"
+              className="p-1.5 rounded-md hover:bg-destructive/20 hover:text-destructive transition-colors text-muted-foreground"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
