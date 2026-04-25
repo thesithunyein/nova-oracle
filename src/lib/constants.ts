@@ -9,7 +9,7 @@ export const CLOAK_PROGRAM_ID = new PublicKey(
 
 export const SOLANA_RPC_URL =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || (IS_DEVNET
-    ? "https://api.devnet.solana.com"
+    ? "https://rpc.ankr.com/solana_devnet"
     : "https://api.mainnet-beta.solana.com");
 
 export const CLOAK_RELAY_URL =
