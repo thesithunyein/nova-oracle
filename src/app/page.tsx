@@ -389,12 +389,12 @@ export default function LandingPage() {
                 <ExternalLink className="w-4 h-4" /> Cloak Docs
               </a>
               <a
-                href="https://solscan.io/account/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW"
+                href="https://explorer.solana.com/address/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW?cluster=devnet"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
-                <ExternalLink className="w-4 h-4" /> Solscan
+                <ExternalLink className="w-4 h-4" /> Explorer
               </a>
             </div>
             <p className="text-sm text-muted-foreground">

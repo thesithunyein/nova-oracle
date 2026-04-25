@@ -53,8 +53,14 @@ export function calculateNetAmount(grossAmount: bigint): bigint {
   return grossAmount - calculateFee(grossAmount);
 }
 
-export const SOLSCAN_BASE = IS_DEVNET ? "https://solscan.io" : "https://solscan.io";
+export const EXPLORER_BASE = IS_DEVNET
+  ? "https://explorer.solana.com"
+  : "https://solscan.io";
 export const SOLSCAN_TX = (sig: string) =>
-  IS_DEVNET ? `${SOLSCAN_BASE}/tx/${sig}?cluster=devnet` : `${SOLSCAN_BASE}/tx/${sig}`;
+  IS_DEVNET
+    ? `${EXPLORER_BASE}/tx/${sig}?cluster=devnet`
+    : `${EXPLORER_BASE}/tx/${sig}`;
 export const SOLSCAN_ACCOUNT = (addr: string) =>
-  IS_DEVNET ? `${SOLSCAN_BASE}/account/${addr}?cluster=devnet` : `${SOLSCAN_BASE}/account/${addr}`;
+  IS_DEVNET
+    ? `${EXPLORER_BASE}/address/${addr}?cluster=devnet`
+    : `${EXPLORER_BASE}/account/${addr}`;

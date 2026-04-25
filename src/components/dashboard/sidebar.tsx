@@ -76,13 +76,13 @@ export function Sidebar() {
       {/* Bottom section */}
       <div className="p-4 border-t border-border space-y-3">
         <a
-          href="https://solscan.io/account/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW"
+          href="https://explorer.solana.com/address/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW?cluster=devnet"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-accent transition-colors"
         >
           <ExternalLink className="w-3.5 h-3.5" />
-          Cloak Program on Solscan
+          Cloak Program on Explorer
         </a>
         {publicKey && (
           <div className="px-3 py-2 rounded-lg bg-accent/50">

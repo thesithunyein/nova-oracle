@@ -115,7 +115,7 @@ export default function HistoryPage() {
                         rel="noopener noreferrer"
                         className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
                       >
-                        Solscan <ExternalLink className="w-3 h-3" />
+                        Explorer <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
                   </div>

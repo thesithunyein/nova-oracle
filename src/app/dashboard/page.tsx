@@ -194,12 +194,12 @@ export default function DashboardPage() {
               </p>
               <div className="flex gap-3 mt-3">
                 <a
-                  href="https://solscan.io/account/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW"
+                  href="https://explorer.solana.com/address/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW?cluster=devnet"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <Button variant="outline" size="sm">
-                    View on Solscan <ExternalLink className="w-3.5 h-3.5" />
+                    View on Explorer <ExternalLink className="w-3.5 h-3.5" />
                   </Button>
                 </a>
                 <a
