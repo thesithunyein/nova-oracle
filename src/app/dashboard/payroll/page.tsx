@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,9 +152,40 @@ export default function PayrollPage() {
           let signature: string;
 
           if (IS_DEVNET) {
-            // Demo mode — simulate per-recipient shielded payment
-            await new Promise((r) => setTimeout(r, 1500 + Math.random() * 800));
-            signature = randomSig();
+            // Devnet — real SOL transfer
+            if (!signTransaction) throw new Error("Wallet doesn't support signing");
+            const recipientPubkey = new PublicKey(recipient.wallet);
+            const lamports = Math.round(parseFloat(recipient.amount) * LAMPORTS_PER_SOL);
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+            const tx = new Transaction({
+              blockhash,
+              lastValidBlockHeight,
+              feePayer: publicKey,
+            }).add(
+              SystemProgram.transfer({
+                fromPubkey: publicKey,
+                toPubkey: recipientPubkey,
+                lamports,
+              })
+            );
+            const signed = await signTransaction(tx);
+            signature = await connection.sendRawTransaction(signed.serialize(), {
+              skipPreflight: false,
+              preflightCommitment: "confirmed",
+              maxRetries: 5,
+            });
+            // Wait for confirmation
+            let confirmed = false;
+            for (let j = 0; j < 30; j++) {
+              await new Promise((r) => setTimeout(r, 1000));
+              const status = await connection.getSignatureStatus(signature);
+              if (status.value?.err) throw new Error("Tx failed: " + JSON.stringify(status.value.err));
+              if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") {
+                confirmed = true;
+                break;
+              }
+            }
+            if (!confirmed) throw new Error("Tx not confirmed in 30s");
           } else {
             const amount = cloak!.toBaseUnits(parseFloat(recipient.amount), selectedToken);
             const recipientPubkey = new PublicKey(recipient.wallet);
