@@ -11,13 +11,14 @@ import {
   Shield,
   ArrowUpRight,
   ArrowDownLeft,
+  Trash2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import { shortenAddress } from "@/lib/utils";
 
 export default function HistoryPage() {
-  const { transactions } = useAppStore();
+  const { transactions, clearTransactions } = useAppStore();
 
   const exportCSV = () => {
     const headers = "Date,Type,Amount,Token,Recipient,Status,Transaction\n";
@@ -58,9 +59,14 @@ export default function HistoryPage() {
           </p>
         </div>
         {transactions.length > 0 && (
-          <Button variant="outline" size="sm" onClick={exportCSV}>
-            <Download className="w-4 h-4" /> Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="w-4 h-4" /> Export CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={clearTransactions} className="text-red-400 hover:text-red-300">
+              <Trash2 className="w-4 h-4" /> Clear
+            </Button>
+          </div>
         )}
       </div>
 

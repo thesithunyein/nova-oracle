@@ -30,6 +30,7 @@ interface AppState {
   removePayrollBatch: (id: string) => void;
 
   addTransaction: (tx: TransactionRecord) => void;
+  clearTransactions: () => void;
   addViewingKey: (key: ViewingKey) => void;
   removeViewingKey: (id: string) => void;
 
@@ -85,6 +86,8 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           transactions: [tx, ...state.transactions],
         })),
+
+      clearTransactions: () => set(() => ({ transactions: [] })),
 
       addViewingKey: (key) =>
         set((state) => ({

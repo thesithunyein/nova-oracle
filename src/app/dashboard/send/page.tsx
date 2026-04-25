@@ -69,9 +69,16 @@ export default function SendPage() {
             lamports,
           })
         );
+        toast.info("Sending transaction to devnet...");
         signature = await sendTransaction(transaction, connection);
-        // Don't block on confirmation — devnet can be slow
-        connection.confirmTransaction(signature, "confirmed").catch(() => {});
+        toast.info("Waiting for confirmation...");
+        // Wait up to 60s for confirmation
+        const latestBlockhash = await connection.getLatestBlockhash();
+        await connection.confirmTransaction({
+          signature,
+          blockhash: latestBlockhash.blockhash,
+          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        }, "confirmed");
       } else {
         // Production — real Cloak SDK (mainnet)
         const cloak = await import("@/lib/cloak");
