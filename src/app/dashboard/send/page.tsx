@@ -62,26 +62,14 @@ export default function SendPage() {
         // Devnet — real SOL transfer via wallet adapter
         const recipientPubkey = new PublicKey(recipient);
         const lamports = Math.round(parseFloat(amount) * LAMPORTS_PER_SOL);
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-        const transaction = new Transaction({
-          blockhash,
-          lastValidBlockHeight,
-          feePayer: publicKey,
-        }).add(
+        const transaction = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: recipientPubkey,
             lamports,
           })
         );
-        toast.info("Sending transaction to devnet...");
         signature = await sendTransaction(transaction, connection);
-        toast.info("Waiting for confirmation...");
-        await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight,
-        }, "confirmed");
       } else {
         // Production — real Cloak SDK (mainnet)
         const cloak = await import("@/lib/cloak");
