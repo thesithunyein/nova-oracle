@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const NETWORK = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet") as "devnet" | "mainnet-beta";
-export const IS_DEVNET = NETWORK === "devnet";
+export const IS_DEVNET = NETWORK !== "mainnet-beta";
 
 export const CLOAK_PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_CLOAK_PROGRAM_ID || "zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW"
