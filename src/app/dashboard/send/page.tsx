@@ -244,13 +244,17 @@ export default function SendPage() {
                       >
                         <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                       </button>
-                      <a
-                        href={SOLSCAN_TX(txResult.signature)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-3 h-3 text-primary" />
-                      </a>
+                      {IS_DEVNET ? (
+                        <span className="text-xs text-yellow-400">Demo</span>
+                      ) : (
+                        <a
+                          href={SOLSCAN_TX(txResult.signature)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="w-3 h-3 text-primary" />
+                        </a>
+                      )}
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">

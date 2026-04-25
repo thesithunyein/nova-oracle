@@ -201,7 +201,7 @@ export default function LandingPage() {
             {[
               { label: "Protocol", value: "Cloak v1" },
               { label: "Program ID", value: "zh1eL...qRkW" },
-              { label: "Network", value: "Mainnet" },
+              { label: "Network", value: "Devnet" },
               { label: "Tokens", value: "SOL · USDC · USDT" },
             ].map((stat) => (
               <div
@@ -342,7 +342,7 @@ export default function LandingPage() {
                   <WalletMultiButton />
                 )}
               </div>
-              <div className="mt-6 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5" /> Client-side ZK proofs
                 </span>
@@ -350,7 +350,7 @@ export default function LandingPage() {
                   <Shield className="w-3.5 h-3.5" /> Non-custodial
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5" /> Live on mainnet
+                  <Zap className="w-3.5 h-3.5" /> Devnet (Mainnet Ready)
                 </span>
               </div>
             </div>

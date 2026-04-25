@@ -20,10 +20,9 @@ export const metadata: Metadata = {
     "shielded transactions",
   ],
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
+    icon: { url: "/icon.svg", type: "image/svg+xml" },
+    shortcut: "/icon.svg",
+    apple: "/favicon.svg",
   },
   openGraph: {
     title: "NovaPay — Private Payroll on Solana",

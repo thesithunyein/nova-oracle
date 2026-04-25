@@ -13,7 +13,7 @@ import {
   ArrowDownLeft,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
-import { SOLSCAN_TX } from "@/lib/constants";
+import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import { shortenAddress } from "@/lib/utils";
 
 export default function HistoryPage() {
@@ -109,14 +109,20 @@ export default function HistoryPage() {
                       {tx.amount} {tx.token}
                     </p>
                     {tx.txSignature && (
-                      <a
-                        href={SOLSCAN_TX(tx.txSignature)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
-                      >
-                        Solscan <ExternalLink className="w-3 h-3" />
-                      </a>
+                      IS_DEVNET ? (
+                        <span className="text-xs text-yellow-400 flex items-center gap-1 justify-end">
+                          <Shield className="w-3 h-3" /> Demo tx
+                        </span>
+                      ) : (
+                        <a
+                          href={SOLSCAN_TX(tx.txSignature)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
+                        >
+                          Solscan <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )
                     )}
                   </div>
                 </div>

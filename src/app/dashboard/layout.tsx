@@ -43,14 +43,14 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      <main className="ml-64 min-h-screen">
-        <div className="px-8 pt-2 pb-0">
+      <main className="lg:ml-64 min-h-screen">
+        <div className="px-4 sm:px-8 pt-14 lg:pt-2 pb-0">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-            Demo Mode — Devnet (no real funds) · Switch to mainnet-beta for production
+            Demo Mode — Devnet (no real funds)
           </div>
         </div>
-        <div className="p-8 pt-4">{children}</div>
+        <div className="p-4 sm:p-8 pt-4">{children}</div>
       </main>
     </div>
   );
