@@ -21,6 +21,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import type { PayrollRecipient, TokenType } from "@/lib/types";
@@ -65,7 +66,8 @@ export default function PayrollPage() {
   };
 
   const downloadSampleCSV = () => {
-    const csv = "name,wallet,amount\nAlice,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.05\nBob,3zpsbtREv5J3uFGtRFwqaBAdKfR9KrpYoEqQTjzxDMsiR,0.025\nCharlie,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.01\n";
+    // Use known valid devnet addresses
+    const csv = "name,wallet,amount\nAlice,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.05\nBob,11111111111111111111111111111111,0.025\nCharlie,SysvarRent111111111111111111111111111111111,0.01\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -384,7 +386,9 @@ export default function PayrollPage() {
               </div>
             </div>
             <div className="space-y-3">
-              {recipients.map((r, i) => (
+              {recipients.map((r, i) => {
+                const walletInvalid = r.wallet.trim() && (() => { try { new PublicKey(r.wallet); return false; } catch { return true; } })();
+                return (
                 <div key={i} className="flex gap-3 items-start">
                   <div className="w-8 h-10 flex items-center justify-center text-sm text-muted-foreground font-mono">
                     {i + 1}
@@ -395,14 +399,19 @@ export default function PayrollPage() {
                     onChange={(e) => updateRecipient(i, "name", e.target.value)}
                     className="flex-[2]"
                   />
-                  <Input
-                    placeholder="Wallet address (Solana)"
-                    value={r.wallet}
-                    onChange={(e) =>
-                      updateRecipient(i, "wallet", e.target.value)
-                    }
-                    className="flex-[4] font-mono text-xs"
-                  />
+                  <div className="flex-[4]">
+                    <Input
+                      placeholder="Wallet address (Solana)"
+                      value={r.wallet}
+                      onChange={(e) =>
+                        updateRecipient(i, "wallet", e.target.value)
+                      }
+                      className={cn("font-mono text-xs", walletInvalid && "border-red-500")}
+                    />
+                    {walletInvalid && (
+                      <p className="text-xs text-red-400 mt-1">Invalid Solana address</p>
+                    )}
+                  </div>
                   <Input
                     type="number"
                     placeholder="Amount"
@@ -424,7 +433,8 @@ export default function PayrollPage() {
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
