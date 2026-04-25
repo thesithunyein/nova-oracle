@@ -181,51 +181,82 @@ export default function PayrollPage() {
         mint = cloak.getMintForToken(selectedToken);
       }
 
-      for (let i = 0; i < recipients.length; i++) {
-        const recipient = recipients[i];
-        const recipientId = payrollRecipients[i].id;
-
-        updateRecipientStatus(batchId, recipientId, "processing");
-
+      if (IS_DEVNET) {
+        // Devnet — batch all transfers into ONE transaction (single Phantom approval)
+        if (!signTransaction) throw new Error("Wallet doesn't support signing");
+        recipients.forEach((_, i) =>
+          updateRecipientStatus(batchId, payrollRecipients[i].id, "processing")
+        );
         try {
-          let signature: string;
-
-          if (IS_DEVNET) {
-            // Devnet — real SOL transfer
-            if (!signTransaction) throw new Error("Wallet doesn't support signing");
-            const recipientPubkey = new PublicKey(recipient.wallet);
-            const lamports = Math.round(parseFloat(recipient.amount) * LAMPORTS_PER_SOL);
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
-            const tx = new Transaction({
-              blockhash,
-              lastValidBlockHeight,
-              feePayer: publicKey,
-            }).add(
+          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+          const tx = new Transaction({
+            blockhash,
+            lastValidBlockHeight,
+            feePayer: publicKey,
+          });
+          for (const r of recipients) {
+            tx.add(
               SystemProgram.transfer({
                 fromPubkey: publicKey,
-                toPubkey: recipientPubkey,
-                lamports,
+                toPubkey: new PublicKey(r.wallet),
+                lamports: Math.round(parseFloat(r.amount) * LAMPORTS_PER_SOL),
               })
             );
-            const signed = await signTransaction(tx);
-            signature = await connection.sendRawTransaction(signed.serialize(), {
-              skipPreflight: false,
-              preflightCommitment: "confirmed",
-              maxRetries: 5,
-            });
-            // Wait for confirmation
-            let confirmed = false;
-            for (let j = 0; j < 30; j++) {
-              await new Promise((r) => setTimeout(r, 1000));
-              const status = await connection.getSignatureStatus(signature);
-              if (status.value?.err) throw new Error("Tx failed: " + JSON.stringify(status.value.err));
-              if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") {
-                confirmed = true;
-                break;
-              }
+          }
+          toast.info("Approve the batch in your wallet (single transaction)...");
+          const signed = await signTransaction(tx);
+          const signature = await connection.sendRawTransaction(signed.serialize(), {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+            maxRetries: 5,
+          });
+          toast.info("Confirming batch on devnet...");
+          let confirmed = false;
+          for (let j = 0; j < 30; j++) {
+            await new Promise((r) => setTimeout(r, 1000));
+            const status = await connection.getSignatureStatus(signature);
+            if (status.value?.err) throw new Error("Tx failed: " + JSON.stringify(status.value.err));
+            if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") {
+              confirmed = true;
+              break;
             }
-            if (!confirmed) throw new Error("Tx not confirmed in 30s");
-          } else {
+          }
+          if (!confirmed) throw new Error("Batch not confirmed in 30s");
+
+          // All recipients share the same signature (one batched tx)
+          recipients.forEach((r, i) => {
+            updateRecipientStatus(batchId, payrollRecipients[i].id, "completed", signature);
+            addTransaction({
+              id: crypto.randomUUID(),
+              type: "payroll",
+              amount: parseFloat(r.amount),
+              token: selectedToken,
+              recipient: r.wallet,
+              txSignature: signature,
+              timestamp: new Date(),
+              status: "confirmed",
+              batchId,
+            });
+            results.push({ name: r.name, status: "success", sig: signature });
+          });
+          setExecutionProgress({ current: recipients.length, total: recipients.length, results });
+          toast.success(`Batch complete — ${recipients.length} private transfers in one tx`);
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : "Unknown error";
+          recipients.forEach((r, i) => {
+            updateRecipientStatus(batchId, payrollRecipients[i].id, "failed", undefined, errMsg);
+            results.push({ name: r.name, status: "failed" });
+          });
+          setExecutionProgress({ current: recipients.length, total: recipients.length, results });
+          toast.error("Batch failed: " + errMsg);
+        }
+      } else {
+        // Mainnet — real Cloak shielded send per recipient
+        for (let i = 0; i < recipients.length; i++) {
+          const recipient = recipients[i];
+          const recipientId = payrollRecipients[i].id;
+          updateRecipientStatus(batchId, recipientId, "processing");
+          try {
             const amount = cloak!.toBaseUnits(parseFloat(recipient.amount), selectedToken);
             const recipientPubkey = new PublicKey(recipient.wallet);
             const result = await cloak!.shieldedSend({
@@ -236,45 +267,29 @@ export default function PayrollPage() {
               viewingKeyNk: cloakKeys.viewingKeyNk,
               connection,
             });
-            signature = result.signature;
+            const signature = result.signature;
+            updateRecipientStatus(batchId, recipientId, "completed", signature);
+            addTransaction({
+              id: crypto.randomUUID(),
+              type: "payroll",
+              amount: parseFloat(recipient.amount),
+              token: selectedToken,
+              recipient: recipient.wallet,
+              txSignature: signature,
+              timestamp: new Date(),
+              status: "confirmed",
+              batchId,
+            });
+            results.push({ name: recipient.name, status: "success", sig: signature });
+            toast.success(`Paid ${recipient.name}: ${recipient.amount} ${selectedToken} (shielded)`);
+          } catch (error) {
+            const errMsg = error instanceof Error ? error.message : "Unknown error";
+            updateRecipientStatus(batchId, recipientId, "failed", undefined, errMsg);
+            results.push({ name: recipient.name, status: "failed" });
+            toast.error(`Failed: ${recipient.name} — ${errMsg}`);
           }
-
-          updateRecipientStatus(batchId, recipientId, "completed", signature);
-
-          addTransaction({
-            id: crypto.randomUUID(),
-            type: "payroll",
-            amount: parseFloat(recipient.amount),
-            token: selectedToken,
-            recipient: recipient.wallet,
-            txSignature: signature,
-            timestamp: new Date(),
-            status: "confirmed",
-            batchId,
-          });
-
-          results.push({
-            name: recipient.name,
-            status: "success",
-            sig: signature,
-          });
-
-          toast.success(
-            `Paid ${recipient.name}: ${recipient.amount} ${selectedToken} (shielded)`
-          );
-        } catch (error) {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
-          updateRecipientStatus(batchId, recipientId, "failed", undefined, errMsg);
-          results.push({ name: recipient.name, status: "failed" });
-          toast.error(`Failed: ${recipient.name} — ${errMsg}`);
+          setExecutionProgress({ current: i + 1, total: recipients.length, results });
         }
-
-        setExecutionProgress({
-          current: i + 1,
-          total: recipients.length,
-          results,
-        });
       }
 
       const allSuccess = results.every((r) => r.status === "success");
