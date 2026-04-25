@@ -20,7 +20,7 @@ import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import type { TokenType } from "@/lib/types";
 
 export default function SendPage() {
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const { connection } = useConnection();
   const { addTransaction } = useAppStore();
 
@@ -59,17 +59,45 @@ export default function SendPage() {
       let signature: string;
 
       if (IS_DEVNET) {
-        // Devnet — real SOL transfer via wallet adapter
+        // Devnet — real SOL transfer
+        if (!signTransaction) throw new Error("Wallet doesn't support signing");
         const recipientPubkey = new PublicKey(recipient);
         const lamports = Math.round(parseFloat(amount) * LAMPORTS_PER_SOL);
-        const transaction = new Transaction().add(
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+        const transaction = new Transaction({
+          blockhash,
+          lastValidBlockHeight,
+          feePayer: publicKey,
+        }).add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: recipientPubkey,
             lamports,
           })
         );
-        signature = await sendTransaction(transaction, connection);
+        toast.info("Please approve in your wallet...");
+        const signed = await signTransaction(transaction);
+        toast.info("Submitting to devnet...");
+        const rawTx = signed.serialize();
+        signature = await connection.sendRawTransaction(rawTx, {
+          skipPreflight: false,
+          preflightCommitment: "confirmed",
+          maxRetries: 5,
+        });
+        // Verify it landed by polling status
+        let confirmed = false;
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const status = await connection.getSignatureStatus(signature);
+          if (status.value?.err) {
+            throw new Error("Transaction failed: " + JSON.stringify(status.value.err));
+          }
+          if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") {
+            confirmed = true;
+            break;
+          }
+        }
+        if (!confirmed) throw new Error("Transaction not confirmed within 30 seconds. It may still land — check Explorer.");
       } else {
         // Production — real Cloak SDK (mainnet)
         const cloak = await import("@/lib/cloak");
