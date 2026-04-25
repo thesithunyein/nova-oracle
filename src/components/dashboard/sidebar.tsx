@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { NovaLogoFull } from "@/components/ui/nova-logo";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { shortenAddress } from "@/lib/utils";
+import { IS_DEVNET, NETWORK } from "@/lib/constants";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -75,6 +76,19 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className="p-4 border-t border-border space-y-3">
+        {/* Network badge */}
+        <div className={cn(
+          "px-3 py-2 rounded-lg flex items-center gap-2 text-xs",
+          IS_DEVNET ? "bg-yellow-500/10 border border-yellow-500/20" : "bg-emerald-500/10 border border-emerald-500/20"
+        )}>
+          <span className={cn(
+            "w-1.5 h-1.5 rounded-full animate-pulse",
+            IS_DEVNET ? "bg-yellow-400" : "bg-emerald-400"
+          )} />
+          <span className={IS_DEVNET ? "text-yellow-400" : "text-emerald-400"}>
+            {IS_DEVNET ? "Devnet (test)" : "Mainnet (live)"}
+          </span>
+        </div>
         <a
           href="https://explorer.solana.com/address/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW?cluster=devnet"
           target="_blank"

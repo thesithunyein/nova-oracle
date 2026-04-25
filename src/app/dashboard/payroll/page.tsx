@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Download,
   Shield,
+  Upload,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -61,6 +62,44 @@ export default function PayrollPage() {
     if (recipients.length > 1) {
       setRecipients(recipients.filter((_, i) => i !== index));
     }
+  };
+
+  const downloadSampleCSV = () => {
+    const csv = "name,wallet,amount\nAlice,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.05\nBob,3zpsbtREv5J3uFGtRFwqaBAdKfR9KrpYoEqQTjzxDMsiR,0.025\nCharlie,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.01\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "payroll-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.trim().split(/\r?\n/);
+      // Skip header if present
+      const header = lines[0].toLowerCase();
+      const dataLines = header.includes("name") && header.includes("wallet") ? lines.slice(1) : lines;
+      const parsed = dataLines
+        .map((line) => {
+          const [name, wallet, amount] = line.split(",").map((s) => s.trim());
+          return { name: name || "", wallet: wallet || "", amount: amount || "" };
+        })
+        .filter((r) => r.wallet && r.amount);
+      if (parsed.length === 0) {
+        toast.error("No valid recipients found in CSV");
+        return;
+      }
+      setRecipients(parsed);
+      toast.success(`Imported ${parsed.length} recipients from CSV`);
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // reset so same file can be re-uploaded
   };
 
   const updateRecipient = (
@@ -307,11 +346,27 @@ export default function PayrollPage() {
 
           {/* Recipients */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <label className="text-sm font-medium">Recipients</label>
-              <Button variant="ghost" size="sm" onClick={addRecipient}>
-                <Plus className="w-4 h-4" /> Add Recipient
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="ghost" size="sm" onClick={downloadSampleCSV}>
+                  <Download className="w-4 h-4" /> Sample CSV
+                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleCSVUpload}
+                  />
+                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                    <Upload className="w-4 h-4" /> Import CSV
+                  </span>
+                </label>
+                <Button variant="ghost" size="sm" onClick={addRecipient}>
+                  <Plus className="w-4 h-4" /> Add Recipient
+                </Button>
+              </div>
             </div>
             <div className="space-y-3">
               {recipients.map((r, i) => (
