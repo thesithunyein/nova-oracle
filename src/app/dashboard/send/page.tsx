@@ -69,11 +69,7 @@ export default function SendPage() {
             lamports,
           })
         );
-        signature = await sendTransaction(transaction, connection, {
-          maxRetries: 5,
-          skipPreflight: false,
-          preflightCommitment: "confirmed",
-        });
+        signature = await sendTransaction(transaction, connection);
       } else {
         // Production — real Cloak SDK (mainnet)
         const cloak = await import("@/lib/cloak");
