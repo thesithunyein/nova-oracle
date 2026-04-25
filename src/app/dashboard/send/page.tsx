@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey, Keypair } from "@solana/web3.js";
+import { PublicKey, Keypair, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,8 @@ import { useAppStore } from "@/lib/store";
 import { SOLSCAN_TX, IS_DEVNET } from "@/lib/constants";
 import type { TokenType } from "@/lib/types";
 
-function randomSig(): string {
-  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  return Array.from({ length: 88 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-}
-
 export default function SendPage() {
-  const { publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const { addTransaction } = useAppStore();
 
@@ -64,9 +59,19 @@ export default function SendPage() {
       let signature: string;
 
       if (IS_DEVNET) {
-        // Demo mode — simulate Cloak shielded transfer
-        await new Promise((r) => setTimeout(r, 2000 + Math.random() * 1000));
-        signature = randomSig();
+        // Devnet — real SOL transfer via wallet adapter
+        const recipientPubkey = new PublicKey(recipient);
+        const lamports = Math.round(parseFloat(amount) * LAMPORTS_PER_SOL);
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: recipientPubkey,
+            lamports,
+          })
+        );
+        signature = await sendTransaction(transaction, connection);
+        // Don't block on confirmation — devnet can be slow
+        connection.confirmTransaction(signature, "confirmed").catch(() => {});
       } else {
         // Production — real Cloak SDK (mainnet)
         const cloak = await import("@/lib/cloak");
@@ -244,17 +249,13 @@ export default function SendPage() {
                       >
                         <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                       </button>
-                      {IS_DEVNET ? (
-                        <span className="text-xs text-yellow-400">Demo</span>
-                      ) : (
-                        <a
-                          href={SOLSCAN_TX(txResult.signature)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink className="w-3 h-3 text-primary" />
-                        </a>
-                      )}
+                      <a
+                        href={SOLSCAN_TX(txResult.signature)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-3 h-3 text-primary" />
+                      </a>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">

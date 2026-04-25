@@ -109,20 +109,14 @@ export default function HistoryPage() {
                       {tx.amount} {tx.token}
                     </p>
                     {tx.txSignature && (
-                      IS_DEVNET ? (
-                        <span className="text-xs text-yellow-400 flex items-center gap-1 justify-end">
-                          <Shield className="w-3 h-3" /> Demo tx
-                        </span>
-                      ) : (
-                        <a
-                          href={SOLSCAN_TX(tx.txSignature)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
-                        >
-                          Solscan <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )
+                      <a
+                        href={SOLSCAN_TX(tx.txSignature)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
+                      >
+                        Solscan <ExternalLink className="w-3 h-3" />
+                      </a>
                     )}
                   </div>
                 </div>

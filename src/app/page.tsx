@@ -166,12 +166,12 @@ export default function LandingPage() {
               and compliance reports — all shielded.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               {connected ? (
                 <Link href="/dashboard">
-                  <Button variant="glow" size="xl">
+                  <Button variant="glow" size="lg">
                     Go to Dashboard
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
               ) : (
@@ -182,8 +182,8 @@ export default function LandingPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button variant="outline" size="xl">
-                  <Github className="w-5 h-5" />
+                <Button variant="outline" size="lg" className="gap-2">
+                  <Github className="w-4 h-4" />
                   View Source
                 </Button>
               </a>
@@ -330,12 +330,12 @@ export default function LandingPage() {
                 Connect your Solana wallet and run your first shielded payroll
                 in under two minutes.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                 {connected ? (
                   <Link href="/dashboard">
-                    <Button variant="glow" size="xl">
+                    <Button variant="glow" size="lg">
                       Open Dashboard
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
                 ) : (
