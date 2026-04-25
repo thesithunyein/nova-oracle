@@ -66,9 +66,12 @@ export default function PayrollPage() {
   };
 
   const downloadSampleCSV = () => {
-    // Use connected wallet for all sample rows so the demo always works (sends to self)
-    const addr = publicKey?.toBase58() || "AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF";
-    const csv = `name,wallet,amount\nAlice,${addr},0.005\nBob,${addr},0.003\nCharlie,${addr},0.002\n`;
+    // Real working devnet addresses verified by successful test batch
+    const csv = `name,wallet,amount
+Alice,AXssUZdJNfhjCXsA8e17WcvwqrdDXqzaR1vJPZBYmWeF,0.005
+Bob,DDkpbNgPHkRQCzNoX7Nt5MiFkstbqHVenDbm5JWx5CZu,0.003
+Charlie,HVF22YGyWzzKbqK5VC3b8GuxsW2UiC2YFX52evCwEyC,0.002
+`;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

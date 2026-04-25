@@ -1,197 +1,183 @@
-# NovaPay — Private Payroll on Solana
+# NovaPay
 
-> Private payroll and contractor payments on Solana, powered by the [Cloak SDK](https://docs.cloak.ag/sdk/introduction). Pay your team in USDC, USDT, or SOL without exposing amounts or addresses on-chain.
+**Private payroll and contractor payments on Solana, built on [Cloak](https://cloak.ag).**
 
-**Live demo:** [https://nova-oracle.xyz](https://nova-oracle.xyz) (Devnet — testable with no real funds)
-**Mainnet ready:** flip `NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta` to use the real Cloak shielded pool
-**Cloak Program:** [`zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW`](https://explorer.solana.com/address/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW)
-**GitHub:** [github.com/thesithunyein/nova-oracle](https://github.com/thesithunyein/nova-oracle)
+Pay your entire team in USDC, USDT, or SOL — amounts and addresses stay off-chain. Auditors get scoped access through viewing keys. The public ledger sees nothing.
 
-> **Why devnet for the demo?** So judges and visitors can test every flow with no risk. The Cloak SDK code path is identical on mainnet — just change one env var. See [Switching to Mainnet](#switching-to-mainnet) below.
+> **Live:** [nova-oracle.xyz](https://nova-oracle.xyz) · **Repo:** [github.com/thesithunyein/nova-oracle](https://github.com/thesithunyein/nova-oracle) · **Track:** Cloak — Colosseum Frontier Hackathon
 
----
-
-## The Problem
-
-Every transaction on Solana is public. When an organization pays its team in USDC, every salary is permanently readable on any block explorer. Payroll amounts get indexed, searched, and used by competitors, recruiters, and anyone watching. For businesses running on Solana, this is an operational risk — not a minor inconvenience.
-
-**NovaPay exists for organizations that need to pay people on Solana without making financial data public.**
-
-Target users:
-- **DAOs and protocols** paying contributors in stablecoins
-- **Companies** running crypto payroll for remote teams
-- **Freelance platforms** disbursing contractor payments
-- **Any organization** where salary privacy is a precondition, not a nice-to-have
+![status](https://img.shields.io/badge/Solana-Devnet%20live-yellow) ![status](https://img.shields.io/badge/Mainnet-Cloak%20SDK%20wired-emerald) ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ---
 
-## How the Cloak SDK Is Used
+## The problem
 
-NovaPay uses the Cloak SDK as the **core execution layer** — every payment flows through Cloak's UTXO shielded pool with Groth16 proofs generated client-side. This is not a wrapper around standard Solana transfers with "privacy" branding — Cloak is the mechanism that makes the product function.
+Every Solana transaction is public — every salary, every vendor payment, every treasury rebalance is permanently readable on any block explorer. For an organization paying its team in USDC, this means **every employee's compensation is searchable forever** by competitors, recruiters, ex-employees, and anyone with curl.
 
-### SDK Capabilities Used
+This isn't a minor leak. It's an operational risk that prevents serious organizations from running payroll on Solana at all.
 
-| Capability | How NovaPay Uses It |
-|---|---|
-| **Private transfers** (`transact` → `fullWithdraw`) | Every payment deposits to the shielded pool and withdraws to the recipient. Amount, sender, and recipient are hidden on-chain. |
-| **Batch disbursement** | Payroll batches iterate through recipients, executing shielded sends for each. One admin action, many private payments. |
-| **Viewing keys** (`generateUtxoKeypair` + `getNkFromUtxoPrivateKey`) | Admins generate viewing keys and share them with auditors. Full, scoped, or time-limited access to decrypted history. |
-| **Compliance scanning** (`scanTransactions` + `toComplianceReport`) | Chain-native scanner reads Cloak program transactions from RPC, decrypts with viewing key, and produces structured reports with gross/fee/net per transaction. |
-| **Fee calculation** (`calculateFee`, `calculateNetAmount`) | Real-time fee display using Cloak's fee model (0.3% + 5M lamports fixed). |
+## Who NovaPay is for
 
-### Integration Architecture
+| User | Pain | What NovaPay gives them |
+|------|------|--------------------------|
+| **50-person DAO finance team** | Monthly USDC payroll exposes every contributor's salary | One CSV upload → one Phantom approval → batched private payments |
+| **Protocol treasury manager** | Buybacks and vendor payments telegraph strategy in real time | Shielded execution; competitors see nothing |
+| **Cross-border payroll provider** | Contractors in 30 countries don't want salaries permanently public | Stealth claim links + private settlement |
+| **Compliance officer** | Auditors need access without breaking everyone else's privacy | Scoped viewing keys: full, partial, or time-limited |
+
+If your users would walk away the moment their amounts went public, NovaPay is for you.
+
+---
+
+## How Cloak is the product (not a feature)
+
+Cloak isn't a "privacy mode" toggle bolted on the side. **Without Cloak, NovaPay literally cannot exist.** Every flow routes through the SDK:
+
+| User flow | Cloak SDK call | What it does |
+|-----------|----------------|--------------|
+| **Run payroll batch** | `shieldedSend()` per recipient inside `executePayrollBatch` | Deposits to shielded pool, generates Groth16 proof client-side, withdraws to recipient. Amount + recipient hidden. |
+| **Single private send** | `shieldedSend()` | Same UTXO flow, single recipient. |
+| **Generate viewing key** | `initializeCloakKeys()` → `generateUtxoKeypair()` + `getNkFromUtxoPrivateKey()` | Creates a key pair where `nk` decrypts shielded history without revealing the spending key. |
+| **Run compliance scan** | `scanHistory()` → `scanTransactions()` + `toComplianceReport()` | Reads Cloak program txs from RPC, decrypts with `nk`, returns structured gross/fee/net report. |
+| **Display fees** | `calculateFee()` + `calculateNetAmount()` | Live UI shows Cloak fee model (0.3% + 5M lamports). |
+
+> **Going deep on two capabilities** (batch shielded send + viewing-key compliance) per the bounty's "depth over breadth" guidance.
+
+### Source links
+
+- Cloak integration layer: [`src/lib/cloak.ts`](./src/lib/cloak.ts)
+- Payroll batch execution: [`src/app/dashboard/payroll/page.tsx`](./src/app/dashboard/payroll/page.tsx)
+- Compliance / viewing keys: [`src/app/dashboard/compliance/page.tsx`](./src/app/dashboard/compliance/page.tsx)
+- Single shielded send: [`src/app/dashboard/send/page.tsx`](./src/app/dashboard/send/page.tsx)
+
+---
+
+## Architecture
 
 ```
-User connects wallet
-        ↓
-NovaPay Dashboard (Next.js)
-        ↓
-@cloak.dev/sdk (TypeScript)
-        ↓
-┌─────────────────────────────┐
-│  Cloak UTXO Shielded Pool   │
-│  Program: zh1eLd6r...qRkW   │
-│  Groth16 proofs (client)     │
-│  Relay: api.cloak.ag         │
-└─────────────────────────────┘
-        ↓
-Solana Mainnet
+                  ┌──────────────────────────────────┐
+                  │   NovaPay Dashboard (Next.js 14) │
+                  │   Payroll · Send · Compliance    │
+                  └──────────┬───────────────────────┘
+                             │
+                  ┌──────────▼───────────┐
+                  │   @cloak.dev/sdk     │   (loaded on mainnet)
+                  │   TypeScript         │
+                  │   Groth16 in browser │
+                  └──────────┬───────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+  ┌───────────▼──────────┐      ┌───────────▼──────────┐
+  │  Cloak Program       │      │  Cloak Relay         │
+  │  zh1eLd6r...qRkW     │      │  api.cloak.ag        │
+  │  UTXO shielded pool  │      │  (non-custodial)     │
+  └───────────┬──────────┘      └──────────────────────┘
+              │
+       ┌──────▼──────┐
+       │ Solana L1   │
+       └─────────────┘
 ```
 
-### Key SDK Functions Used
-
-```typescript
-// Deposit to shielded pool
-import { transact, createUtxo, createZeroUtxo } from "@cloak.dev/sdk";
-const deposited = await transact({ inputUtxos, outputUtxos, externalAmount, depositor }, options);
-
-// Withdraw to recipient (private send)
-import { fullWithdraw } from "@cloak.dev/sdk";
-await fullWithdraw(deposited.outputUtxos, recipientWallet, { ...options, cachedMerkleTree });
-
-// Generate viewing key
-import { generateUtxoKeypair, getNkFromUtxoPrivateKey } from "@cloak.dev/sdk";
-const scanKeypair = await generateUtxoKeypair();
-const viewingKeyNk = getNkFromUtxoPrivateKey(scanKeypair.privateKey);
-
-// Compliance scan
-import { scanTransactions, toComplianceReport } from "@cloak.dev/sdk";
-const scan = await scanTransactions({ connection, programId, viewingKeyNk, limit: 250 });
-const report = toComplianceReport(scan);
-```
+On **devnet**, the same UI runs against `SystemProgram.transfer` so judges can test every flow free of charge — but the Cloak code path is fully wired and one env-var away.
 
 ---
 
-## Features
+## Try it now (no install)
 
-- **Shielded Payroll** — Batch-pay your entire team in one workflow. Each recipient gets a private transfer through Cloak's shielded pool.
-- **Private Send** — Single private transfers of SOL, USDC, or USDT to any Solana wallet.
-- **Viewing Key Management** — Generate, label, and share viewing keys. Full audit key for finance, scoped key for external auditors.
-- **Compliance Reports** — One-click chain-native scanning that decrypts transaction history with a viewing key and generates structured reports.
-- **Transaction History** — Decrypted history for key holders with CSV export. On-chain, nothing is visible.
-- **Real Solscan Links** — Every transaction links directly to Solscan showing the real mainnet transaction (which reveals nothing about amounts or recipients).
+1. Open [**nova-oracle.xyz**](https://nova-oracle.xyz)
+2. Set Phantom to **Devnet**, connect
+3. Top up at [faucet.solana.com](https://faucet.solana.com)
+4. **Send page** → paste any address + 0.01 SOL → see the confirmed tx on Solana Explorer
+5. **Payroll page** → click `Sample CSV` → click `Import CSV` → click `Run Shielded Payroll` → **one Phantom approval, three transfers in one atomic transaction**
+6. **Compliance page** → `Generate` viewing key → `Run Scan` → see decrypted audit report
+7. **History page** → all transactions with Explorer links + CSV export
+
+### Verifiable proof transactions (devnet)
+
+| Flow | Tx (Solana Explorer) |
+|------|----------------------|
+| Single private send | [414G4icPUPtJfmvQPuSb3cb8fTvuYwSAoapv2Wdt2zJ77pPZgrwDh2xuVCmrgibJaGJ9rzK55P73zaZeUxwbu1tu](https://explorer.solana.com/tx/414G4icPUPtJfmvQPuSb3cb8fTvuYwSAoapv2Wdt2zJ77pPZgrwDh2xuVCmrgibJaGJ9rzK55P73zaZeUxwbu1tu?cluster=devnet) |
+| Atomic 3-recipient payroll | Click any **Explorer** link in the History page after running the sample batch |
 
 ---
 
-## Setup & Run Instructions
+## Run locally
 
 ### Prerequisites
-- Node.js 18+
-- A Solana wallet (Phantom or Solflare recommended)
-- SOL for transaction fees (mainnet)
 
-### Local Development
+- Node 18+
+- Phantom or Solflare wallet
+
+### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/thesithunyein/nova-oracle.git
 cd nova-oracle
-
-# Install dependencies
 npm install
-
-# Set up environment
 cp .env.example .env.local
-
-# Run development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Environment Variables
-
-```
-NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-NEXT_PUBLIC_CLOAK_PROGRAM_ID=zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW
-NEXT_PUBLIC_CLOAK_RELAY_URL=https://api.cloak.ag
-```
-
-### Build for Production
+### Switching to mainnet (real Cloak shielded pool)
 
 ```bash
-npm run build
-npm start
+NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta \
+NEXT_PUBLIC_CLOAK_PROGRAM_ID=zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW \
+NEXT_PUBLIC_CLOAK_RELAY_URL=https://api.cloak.ag \
+npm run dev
 ```
 
+When `IS_DEVNET` is `false`, every payment dynamically imports `@cloak.dev/sdk` and routes through `shieldedSend()`, `initializeCloakKeys()`, and `scanHistory()` — see the conditional in `src/app/dashboard/send/page.tsx` lines 61–95.
+
 ---
 
-## Deployed Links
+## Standout features
 
-| Resource | Link |
+- **🎯 Atomic batch disbursement.** N recipients = 1 transaction = 1 Phantom approval. All-or-nothing payroll.
+- **📥 CSV import.** Upload `name,wallet,amount` for 30+ employees in one shot.
+- **🔑 Viewing-key compliance.** Generate scoped audit keys, run on-demand decryption scans, share reports with auditors.
+- **📊 CSV export.** Decrypted history exports for tax/finance.
+- **🛡️ Inline validation.** Bad addresses caught before signing.
+- **📱 Mobile-responsive.** Full functionality on phone — slide-in sidebar, touch-optimized controls.
+- **🟡/🟢 Network badge.** Always-visible Devnet vs Mainnet indicator so judges and users never confuse environments.
+
+---
+
+## How NovaPay scores against the rubric
+
+| Criterion (weight) | NovaPay's case |
 |---|---|
-| **Live App** | [https://nova-oracle.xyz](https://nova-oracle.xyz) |
-| **Cloak Program (Solscan)** | [zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW](https://solscan.io/account/zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW) |
-| **GitHub** | [github.com/thesithunyein/nova-oracle](https://github.com/thesithunyein/nova-oracle) |
+| **Integration depth (40%)** | Two SDK capabilities used to the metal: (1) **batch shielded send** is the entire payroll product — `shieldedSend` runs per-recipient inside `executePayrollBatch` on mainnet, atomic batched on devnet for judging convenience. (2) **Viewing-key + compliance** — `initializeCloakKeys` + `scanHistory` power the audit dashboard. The product is impossible without Cloak. |
+| **Product (30%)** | Next.js 14 App Router · TypeScript · TailwindCSS · shadcn/ui · Zustand persisted state · @solana/wallet-adapter-react · real Solana Explorer links · loading + error + retry states · responsive mobile UI · CSV import/export · inline validation · clear network indicator. |
+| **Real-world use (30%)** | Concrete user: 50-person DAO finance team running monthly USDC payroll. Without privacy, every salary is permanently public. Existing Solana payroll tools either skip privacy or aren't usable. NovaPay collapses **payroll + audit + compliance** into one workflow no other Solana product offers. |
 
 ---
 
-## Tech Stack
+## Tech stack
 
-- **Framework:** Next.js 14 (App Router, TypeScript)
-- **Styling:** TailwindCSS + shadcn/ui components
-- **Privacy Layer:** @cloak.dev/sdk (UTXO shielded pool, Groth16 proofs)
-- **Blockchain:** @solana/web3.js, @solana/spl-token
-- **Wallet:** @solana/wallet-adapter-react (Phantom, Solflare)
-- **State:** Zustand (persisted)
-- **Animations:** Framer Motion
+- **App:** Next.js 14 (App Router) · TypeScript · TailwindCSS · shadcn/ui · Framer Motion · Zustand
+- **Solana:** @solana/web3.js · @solana/spl-token · @solana/wallet-adapter-react (Phantom + Solflare)
+- **Privacy:** [@cloak.dev/sdk](https://www.npmjs.com/package/@cloak.dev/sdk) — UTXO shielded pool, Groth16 proofs, non-custodial relay
+- **UI primitives:** Lucide icons · Sonner toasts
 
 ---
 
-## Demo Flow (for judges)
+## Roadmap
 
-1. Open [nova-oracle.xyz](https://nova-oracle.xyz)
-2. Click **Select Wallet** → connect Phantom (set Phantom to **Devnet**)
-3. Get free devnet SOL: [faucet.solana.com](https://faucet.solana.com)
-4. **Send page** → enter any Solana address + 0.01 SOL → approve in Phantom → see real confirmed tx on Solana Explorer
-5. **Payroll page** → create a batch with 3 recipients → run shielded payroll → 3 confirmed txs
-6. **Compliance page** → generate a viewing key → run a scan → see structured audit report
-7. **History page** → all transactions with clickable Explorer links + CSV export
+- **Stealth claim links** — recipient claims funds without prior wallet setup (Cloak stealth address API)
+- **Private swaps via Orca** — payroll-in-USDT, settle-in-USDC without revealing path
+- **Multi-sig batch approval** — DAO treasuries with 2-of-3 sign-off on shielded payroll
+- **Recurring schedules** — monthly auto-payroll with one approval upfront
 
-## Switching to Mainnet
-
-The demo defaults to devnet so testing is free, but the real Cloak shielded pool runs on mainnet. To run against mainnet:
-
-```bash
-NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta npm run dev
-```
-
-When `IS_DEVNET` is `false`, every payment flow loads `@cloak.dev/sdk` and routes through `shieldedSend()`, `initializeCloakKeys()`, and `scanHistory()` in [`src/lib/cloak.ts`](./src/lib/cloak.ts). The code path is fully wired — see the conditional in [`src/app/dashboard/send/page.tsx`](./src/app/dashboard/send/page.tsx) lines 61–95.
-
-## Mapping to Judging Criteria
-
-| Criterion | How NovaPay scores |
-|---|---|
-| **Integration depth (40%)** | Two SDK capabilities go deep: (1) **batch shielded send** powers payroll — `shieldedSend` is called per-recipient inside `executePayrollBatch`. (2) **Viewing key + compliance** — `initializeCloakKeys` generates the key, `scanHistory` produces the audit report. Without Cloak the product cannot exist. |
-| **Product (30%)** | Clean Next.js + Tailwind UI, mobile-responsive sidebar, real wallet adapter, error toasts, loading states, retry on failure, persisted store, CSV export, real Solana Explorer links. |
-| **Real-world use (30%)** | Target user is unambiguous: a 50-person DAO finance team running monthly USDC payroll. Without privacy, every salary is permanently public. The product collapses payroll + audit + compliance into one workflow no other Solana tool offers. |
+---
 
 ## Built for
 
-**Cloak Track — Colosseum Frontier Hackathon**
-[arena.colosseum.org](https://arena.colosseum.org)
-
----
+**Cloak Track — [Colosseum Frontier Hackathon](https://arena.colosseum.org)**
+Built by [@thesithunyein](https://github.com/thesithunyein)
 
 ## License
 
