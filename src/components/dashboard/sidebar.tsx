@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NovaLogoFull } from "@/components/ui/nova-logo";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/payroll", label: "Payroll", icon: Users },
   { href: "/dashboard/send", label: "Send", icon: Send },
+  { href: "/dashboard/claim", label: "Claim Links", icon: Sparkles },
   { href: "/dashboard/compliance", label: "Compliance", icon: Eye },
   { href: "/dashboard/history", label: "History", icon: History },
 ];
