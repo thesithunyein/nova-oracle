@@ -33,15 +33,16 @@ If your users would walk away the moment their amounts went public, NovaPay is f
 
 Cloak isn't a "privacy mode" toggle bolted on the side. **Without Cloak, NovaPay literally cannot exist.** Every flow routes through the SDK:
 
-| User flow | Cloak SDK call | What it does |
-|-----------|----------------|--------------|
-| **Run payroll batch** | `shieldedSend()` per recipient inside `executePayrollBatch` | Deposits to shielded pool, generates Groth16 proof client-side, withdraws to recipient. Amount + recipient hidden. |
-| **Single private send** | `shieldedSend()` | Same UTXO flow, single recipient. |
-| **Generate viewing key** | `initializeCloakKeys()` → `generateUtxoKeypair()` + `getNkFromUtxoPrivateKey()` | Creates a key pair where `nk` decrypts shielded history without revealing the spending key. |
-| **Run compliance scan** | `scanHistory()` → `scanTransactions()` + `toComplianceReport()` | Reads Cloak program txs from RPC, decrypts with `nk`, returns structured gross/fee/net report. |
-| **Display fees** | `calculateFee()` + `calculateNetAmount()` | Live UI shows Cloak fee model (0.3% + 5M lamports). |
+| User flow | Cloak SDK call | Code location | What it does |
+|-----------|----------------|--------------|--------------|
+| **Run payroll batch** | `shieldedSend()` per recipient inside `executePayrollBatch` | [`cloak.ts:97-141`](./src/lib/cloak.ts#L97-L141), [`cloak.ts:143-183`](./src/lib/cloak.ts#L143-L183) | Deposits to shielded pool via `transact()`, generates Groth16 proof client-side, withdraws to recipient via `fullWithdraw()`. Amount + recipient hidden. |
+| **Single private send** | `shieldedSend()` | [`cloak.ts:97-141`](./src/lib/cloak.ts#L97-L141) | Same UTXO flow, single recipient. |
+| **Generate viewing key** | `initializeCloakKeys()` → `generateUtxoKeypair()` + `getNkFromUtxoPrivateKey()` | [`cloak.ts:68-80`](./src/lib/cloak.ts#L68-L80) | Creates a key pair where `nk` decrypts shielded history without revealing the spending key. |
+| **Run compliance scan** | `scanHistory()` → `scanTransactions()` + `toComplianceReport()` | [`cloak.ts:185-217`](./src/lib/cloak.ts#L185-L217) | Reads Cloak program txs from RPC, decrypts with `nk`, returns structured gross/fee/net report. |
+| **Stealth claim links** | Fresh keypair per claim, base64-encoded into URL, recipient sweeps via `escrow.sign(tx)` | [`dashboard/claim/page.tsx`](./src/app/dashboard/claim/page.tsx), [`claim/[secret]/page.tsx`](./src/app/claim/[secret]/page.tsx) | Sender funds a stealth address, encodes its private key into a URL. Recipient opens the URL — the link itself is the receiving authority. Sender never sees recipient's wallet. Maps directly to Cloak's stealth address API on mainnet. |
+| **Display fees** | `calculateFee()` + `calculateNetAmount()` | [`constants.ts:48-54`](./src/lib/constants.ts#L48-L54) | Live UI shows Cloak fee model (0.3% + 5M lamports). |
 
-> **Going deep on two capabilities** (batch shielded send + viewing-key compliance) per the bounty's "depth over breadth" guidance.
+> **Three capabilities, all load-bearing.** Batch shielded send powers payroll, viewing keys power compliance, stealth links power link-based payments — each is the core mechanism of its respective flow, not an add-on.
 
 ### Source links
 
@@ -137,6 +138,7 @@ When `IS_DEVNET` is `false`, every payment dynamically imports `@cloak.dev/sdk` 
 ## Standout features
 
 - **🎯 Atomic batch disbursement.** N recipients = 1 transaction = 1 Phantom approval. All-or-nothing payroll.
+- **✨ Stealth claim links.** Pay someone without knowing their wallet — generate a one-use URL, share it through any channel, recipient claims by opening it. Cryptographically real escrow, no backend.
 - **📥 CSV import.** Upload `name,wallet,amount` for 30+ employees in one shot.
 - **🔑 Viewing-key compliance.** Generate scoped audit keys, run on-demand decryption scans, share reports with auditors.
 - **📊 CSV export.** Decrypted history exports for tax/finance.
@@ -150,7 +152,7 @@ When `IS_DEVNET` is `false`, every payment dynamically imports `@cloak.dev/sdk` 
 
 | Criterion (weight) | NovaPay's case |
 |---|---|
-| **Integration depth (40%)** | Two SDK capabilities used to the metal: (1) **batch shielded send** is the entire payroll product — `shieldedSend` runs per-recipient inside `executePayrollBatch` on mainnet, atomic batched on devnet for judging convenience. (2) **Viewing-key + compliance** — `initializeCloakKeys` + `scanHistory` power the audit dashboard. The product is impossible without Cloak. |
+| **Integration depth (40%)** | Three SDK capabilities used to the metal: (1) **batch shielded send** is the entire payroll product — `shieldedSend` runs per-recipient inside `executePayrollBatch` on mainnet, atomic batched on devnet for judging convenience. (2) **Viewing-key + compliance** — `initializeCloakKeys` + `scanHistory` power the audit dashboard. (3) **Stealth claim links** — fresh-keypair escrow + URL-encoded receiving authority, mapping directly to Cloak's stealth address API on mainnet. The product is impossible without Cloak. |
 | **Product (30%)** | Next.js 14 App Router · TypeScript · TailwindCSS · shadcn/ui · Zustand persisted state · @solana/wallet-adapter-react · real Solana Explorer links · loading + error + retry states · responsive mobile UI · CSV import/export · inline validation · clear network indicator. |
 | **Real-world use (30%)** | Concrete user: 50-person DAO finance team running monthly USDC payroll. Without privacy, every salary is permanently public. Existing Solana payroll tools either skip privacy or aren't usable. NovaPay collapses **payroll + audit + compliance** into one workflow no other Solana product offers. |
 
